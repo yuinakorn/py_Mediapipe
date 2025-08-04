@@ -1,17 +1,110 @@
 <!doctype html>
-<html>
+<html lang="th">
 <head>
-  <title>Face Recognition Flask</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตรวจสอบใบหน้า + การเคลื่อนไหว</title>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        p {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .video-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+        
+        .video-container img {
+            width: 100%;
+            max-width: 720px;
+            height: auto;
+            display: block;
+        }
+        
+        .instructions {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .instructions ul {
+            text-align: left;
+            color: #555;
+        }
+        
+        .status {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #2e7d32;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
-  <h1>อัปโหลดรูปเพื่อตรวจสอบใบหน้า</h1>
-  <form method="POST" enctype="multipart/form-data">
-    <input type="file" name="image" accept="image/*">
-    <input type="submit" value="ตรวจสอบ">
-  </form>
-
-  {% if message %}
-    <h2>{{ message }}</h2>
-  {% endif %}
+    <div class="container">
+        <h1>🔍 ตรวจสอบใบหน้าจริง</h1>
+        <p>ระบบตรวจจับการเคลื่อนไหวของใบหน้าเพื่อยืนยันว่าเป็นบุคคลจริง</p>
+        
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" alt="Video Feed" />
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 วิธีการใช้งาน</h3>
+            <ul>
+                <li>มองตรงไปที่กล้อง</li>
+                <li>กระพริบตาเพื่อยืนยันว่าเป็นใบหน้าจริง</li>
+                <li>หรือยิ้มเพื่อผ่านการตรวจสอบ</li>
+                <li>ระบบจะแสดงสถานะการตรวจสอบบนหน้าจอ</li>
+            </ul>
+        </div>
+        
+        <div class="status">
+            ✅ ระบบพร้อมใช้งาน - โปรดเริ่มการตรวจสอบ
+        </div>
+    </div>
 </body>
 </html>

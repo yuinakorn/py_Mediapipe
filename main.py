@@ -2,11 +2,38 @@ import face_recognition
 import cv2
 import os
 
-# โหลดภาพใบหน้าที่รู้จัก
-known_image = face_recognition.load_image_file("known_people/yui.jpg")
-known_encoding = face_recognition.face_encodings(known_image)[0]
-known_names = ["Yui"]
-known_encodings = [known_encoding]
+# โหลดภาพใบหน้าที่รู้จักทั้งหมดในโฟลเดอร์
+known_encodings = []
+known_names = []
+
+# ตรวจสอบว่าโฟลเดอร์ known_people มีอยู่หรือไม่
+if os.path.exists("known_people"):
+    # วนลูปผ่านไฟล์ทั้งหมดในโฟลเดอร์
+    for filename in os.listdir("known_people"):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
+            # เอานามสกุลไฟล์ออกเพื่อใช้เป็นชื่อ
+            name = os.path.splitext(filename)[0]
+            
+            try:
+                # โหลดภาพและสร้าง encoding
+                image_path = os.path.join("known_people", filename)
+                image = face_recognition.load_image_file(image_path)
+                face_encodings = face_recognition.face_encodings(image)
+                
+                if len(face_encodings) > 0:
+                    # ใช้ใบหน้าแรกที่พบในภาพ
+                    known_encodings.append(face_encodings[0])
+                    known_names.append(name)
+                    print(f"Loaded image for {name} successfully")
+                else:
+                    print(f"No face found in {filename}")
+                    
+            except Exception as e:
+                print(f"Error loading {filename}: {e}")
+else:
+    print("known_people folder not found")
+
+print(f"Loaded {len(known_names)} people: {', '.join(known_names)}")
 
 # เปิดกล้อง
 cap = cv2.VideoCapture(0)
@@ -25,12 +52,19 @@ while True:
     face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
     for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-        matches = face_recognition.compare_faces(known_encodings, face_encoding)
-        name = "Unknown"
-
-        if True in matches:
-            match_index = matches.index(True)
-            name = known_names[match_index]
+        # คำนวณระยะห่างระหว่างใบหน้า
+        face_distances = face_recognition.face_distance(known_encodings, face_encoding)
+        best_match_index = face_distances.argmin()
+        
+        # คำนวณร้อยละความเหมือน (0.6 เป็นเกณฑ์มาตรฐาน)
+        similarity_percentage = (1 - face_distances[best_match_index]) * 100
+        
+        if face_distances[best_match_index] < 0.6:
+            name = known_names[best_match_index]
+            color = (0, 255, 0)  # สีเขียว (BGR)
+        else:
+            name = "Unknown"
+            color = (0, 0, 255)  # สีแดง (BGR)
 
         # ขยายกรอบให้ตรงกับขนาดภาพจริง
         top *= 4
@@ -38,15 +72,12 @@ while True:
         bottom *= 4
         left *= 4
 
-        # กำหนดสีตามชื่อ
-        if name == "Unknown":
-            color = (0, 0, 255)  # สีแดง (BGR)
-        else:
-            color = (0, 255, 0)  # สีเขียว (BGR)
-
-        # วาดกรอบใบหน้าและชื่อ
+        # วาดกรอบใบหน้าและชื่อพร้อมร้อยละ
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-        cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        
+        # แสดงชื่อและร้อยละความเหมือน
+        display_text = f"{name} ({similarity_percentage:.1f}%)"
+        cv2.putText(frame, display_text, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
 
     cv2.imshow('Face Recognition', frame)
 
