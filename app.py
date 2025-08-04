@@ -1,40 +1,54 @@
+from flask import Flask, render_template, request
+import face_recognition
 import cv2
-import mediapipe as mp
+import numpy as np
+import os
+from werkzeug.utils import secure_filename
 
-# สร้างอ็อบเจกต์สำหรับ face detection
-mp_face_detection = mp.solutions.face_detection
-mp_drawing = mp.solutions.drawing_utils
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ใช้กล้อง
-cap = cv2.VideoCapture(0)
+# โหลดใบหน้าที่รู้จัก
+known_encodings = []
+known_names = []
 
-with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5) as face_detection:
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("ไม่สามารถอ่านภาพจากกล้องได้")
-            break
+for filename in os.listdir('known_people'):
+    if filename.endswith(('.jpg', '.png')):
+        path = os.path.join('known_people', filename)
+        image = face_recognition.load_image_file(path)
+        encoding = face_recognition.face_encodings(image)
+        if encoding:
+            known_encodings.append(encoding[0])
+            known_names.append(os.path.splitext(filename)[0])
 
-        # แปลง BGR -> RGB
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    message = ''
+    if request.method == 'POST':
+        file = request.files['image']
+        if file:
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(filepath)
 
-        # ปรับปรุงประสิทธิภาพ
-        image.flags.writeable = False
-        results = face_detection.process(image)
+            # โหลดภาพและแปลงเป็น encoding
+            image = face_recognition.load_image_file(filepath)
+            face_locations = face_recognition.face_locations(image)
+            face_encodings = face_recognition.face_encodings(image, face_locations)
 
-        # กลับมาเป็น writeable เพื่อแสดงผล
-        image.flags.writeable = True
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            names = []
+            for face_encoding in face_encodings:
+                matches = face_recognition.compare_faces(known_encodings, face_encoding)
+                name = "Unknown"
+                if True in matches:
+                    index = matches.index(True)
+                    name = known_names[index]
+                names.append(name)
 
-        # วาดกรอบใบหน้า
-        if results.detections:
-            for detection in results.detections:
-                mp_drawing.draw_detection(image, detection)
+            message = f"พบใบหน้า: {', '.join(names)}"
 
-        # แสดงผลภาพ
-        cv2.imshow('MediaPipe Face Detection', image)
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
+    return render_template('index.html', message=message)
 
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+    app.run(debug=True)

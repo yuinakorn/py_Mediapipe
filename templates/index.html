@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+  <title>Face Recognition Flask</title>
+</head>
+<body>
+  <h1>อัปโหลดรูปเพื่อตรวจสอบใบหน้า</h1>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="file" name="image" accept="image/*">
+    <input type="submit" value="ตรวจสอบ">
+  </form>
+
+  {% if message %}
+    <h2>{{ message }}</h2>
+  {% endif %}
+</body>
+</html>
