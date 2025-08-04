@@ -3,14 +3,28 @@
 ## โครงสร้างโปรเจค
 ```
 py_Mediapipe/
-├── main.py              # Face Recognition ด้วย face_recognition library
-├── app.py               # Face Detection ด้วย MediaPipe
-├── requirements.txt     # Dependencies
-├── known_people/        # ไฟล์ภาพใบหน้าที่รู้จัก
-│   └── yui.jpg         # ภาพตัวอย่าง
-├── venv/               # Python virtual environment
-└── README.md           # ไฟล์นี้
+├── README.md              # เอกสารหลักของโปรเจค
+├── main.py                # Face Recognition ด้วย face_recognition library
+├── app.py                 # Face Detection ด้วย MediaPipe
+├── requirements.txt       # Python dependencies
+├── .gitignore            # Git ignore rules
+├── known_people/         # ไฟล์ภาพใบหน้าที่รู้จัก
+│   └── yui.jpg          # ภาพตัวอย่าง
+├── venv310/             # Python virtual environment (Python 3.10)
+└── docs/                # เอกสารและบันทึกการทำงาน
+    ├── project_structure.md      # โครงสร้างโปรเจค
+    ├── python_path_info.md       # ข้อมูล Python paths
+    ├── face_recognition_updates.md # การอัปเดต face recognition
+    ├── gitignore_info.md         # ข้อมูล .gitignore
+    └── git_setup_info.md         # การตั้งค่า Git
 ```
+
+## เอกสารเพิ่มเติม
+- [โครงสร้างโปรเจค](docs/project_structure.md) - รายละเอียดโครงสร้างและไฟล์
+- [ข้อมูล Python Paths](docs/python_path_info.md) - การหาพาธ Python และสร้าง virtual environment
+- [การอัปเดต Face Recognition](docs/face_recognition_updates.md) - การเปลี่ยนแปลงระบบจดจำใบหน้า
+- [ข้อมูล Gitignore](docs/gitignore_info.md) - การตั้งค่า .gitignore
+- [การตั้งค่า Git](docs/git_setup_info.md) - คำสั่ง Git พื้นฐาน
 
 ## ข้อมูลสำคัญ
 
@@ -65,4 +79,4 @@ python app.py
 โปรเจคนี้เป็นตัวอย่างการใช้งาน Computer Vision สำหรับ Face Recognition และ Face Detection โดยใช้ Python libraries ที่นิยม ควรระวังเรื่อง:
 - การติดตั้ง dlib อาจมีปัญหาในบางระบบ
 - ต้องมีกล้องที่ใช้งานได้
-- ภาพใน known_people ควรมีคุณภาพดีและมีใบหน้าที่ชัดเจน 
+- ภาพใน known_people ควรมีคุณภาพดีและมีใบหน้าที่ชัดเจน # py_Mediapipe
