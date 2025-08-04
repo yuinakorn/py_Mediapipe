@@ -45,6 +45,7 @@
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin: 20px 0;
+            position: relative;
         }
         
         .video-container img {
@@ -52,6 +53,19 @@
             max-width: 720px;
             height: auto;
             display: block;
+        }
+        
+        .status-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 10;
         }
         
         .instructions {
@@ -80,6 +94,46 @@
             margin: 20px 0;
             color: #2e7d32;
             font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .status.blinking {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #e65100;
+        }
+        
+        .status.smiling {
+            background: #e8f5e8;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        
+        .status.no-face {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+        
+        .status.waiting {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -90,6 +144,9 @@
         
         <div class="video-container">
             <img src="{{ url_for('video_feed') }}" alt="Video Feed" />
+            <div class="status-overlay" id="statusOverlay">
+                <span class="loading"></span> กำลังเชื่อมต่อ...
+            </div>
         </div>
         
         <div class="instructions">
@@ -102,9 +159,66 @@
             </ul>
         </div>
         
-        <div class="status">
-            ✅ ระบบพร้อมใช้งาน - โปรดเริ่มการตรวจสอบ
+        <div class="status" id="statusBox">
+            <span class="loading"></span> กำลังเริ่มระบบ...
         </div>
     </div>
+
+    <script>
+        // รับข้อมูลสถานะจาก Server-Sent Events
+        const eventSource = new EventSource('/status_feed');
+        const statusBox = document.getElementById('statusBox');
+        const statusOverlay = document.getElementById('statusOverlay');
+        
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // อัปเดตสถานะหลัก
+                statusBox.innerHTML = data.message_th;
+                statusBox.className = 'status ' + data.message_key;
+                
+                // อัปเดตสถานะบนวิดีโอ
+                statusOverlay.innerHTML = data.message_th;
+                
+                // เพิ่มเอฟเฟกต์ตามสถานะ
+                if (data.message_key === 'blinking') {
+                    statusBox.innerHTML += ' 👁️';
+                } else if (data.message_key === 'smiling') {
+                    statusBox.innerHTML += ' 😊';
+                } else if (data.message_key === 'no-face') {
+                    statusBox.innerHTML += ' 🔍';
+                } else if (data.message_key === 'waiting') {
+                    statusBox.innerHTML += ' ⏳';
+                }
+                
+                // แสดงข้อมูลเพิ่มเติม (ถ้าต้องการ)
+                console.log('Status:', data);
+                
+            } catch (error) {
+                console.error('Error parsing status data:', error);
+                statusBox.innerHTML = '❌ เกิดข้อผิดพลาดในการรับข้อมูล';
+                statusBox.className = 'status no-face';
+            }
+        };
+        
+        eventSource.onerror = function(event) {
+            console.error('EventSource error:', event);
+            statusBox.innerHTML = '❌ การเชื่อมต่อถูกตัด - กรุณารีเฟรชหน้า';
+            statusBox.className = 'status no-face';
+            statusOverlay.innerHTML = '❌';
+        };
+        
+        eventSource.onopen = function(event) {
+            console.log('EventSource connected');
+            statusBox.innerHTML = '✅ เชื่อมต่อสำเร็จ - กำลังรอข้อมูล...';
+            statusBox.className = 'status waiting';
+        };
+        
+        // ปิดการเชื่อมต่อเมื่อปิดหน้า
+        window.addEventListener('beforeunload', function() {
+            eventSource.close();
+        });
+    </script>
 </body>
 </html>

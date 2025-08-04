@@ -1,12 +1,14 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, jsonify
+from flask_cors import CORS
 import cv2
 import mediapipe as mp
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-import io
-import os
+import json
+import threading
+import time
 
 app = Flask(__name__)
+CORS(app)  # เพิ่ม CORS support
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(refine_landmarks=True)
@@ -25,121 +27,117 @@ MESSAGES = {
     'waiting': {'th': 'โปรดกระพริบตาหรือยิ้ม...', 'en': 'Please blink or smile...'}
 }
 
+# ตัวแปรสำหรับเก็บสถานะปัจจุบัน
+current_status = {
+    'message_key': 'no_face',
+    'message_th': MESSAGES['no_face']['th'],
+    'message_en': MESSAGES['no_face']['en'],
+    'has_face': 0,  # เปลี่ยนจาก False เป็น 0
+    'is_blinking': 0,  # เปลี่ยนจาก False เป็น 0
+    'is_smiling': 0  # เปลี่ยนจาก False เป็น 0
+}
+
 def eye_aspect_ratio(landmarks, eye_pts):
     p1 = np.array([landmarks[eye_pts[0]].x, landmarks[eye_pts[0]].y])
     p2 = np.array([landmarks[eye_pts[1]].x, landmarks[eye_pts[1]].y])
     return np.linalg.norm(p2 - p1)
 
-def find_thai_font(font_size=32):
-    """หาฟอนต์ที่รองรับภาษาไทย"""
-    # รายการฟอนต์ที่รองรับภาษาไทย (เรียงตามลำดับความน่าจะเป็น)
-    thai_fonts = [
-        # macOS
-        "/System/Library/Fonts/Supplemental/Thonburi.ttc",
-        "/System/Library/Fonts/Supplemental/Ayuthaya.ttf",
-        "/System/Library/Fonts/Helvetica.ttc",
-        # Linux
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        # Windows
-        "C:/Windows/Fonts/arial.ttf",
-        "C:/Windows/Fonts/tahoma.ttf",
-        # Google Fonts (ถ้ามี)
-        "/usr/share/fonts/truetype/google/noto/NotoSansThai-Regular.ttf",
-    ]
+def process_frame(frame):
+    """ประมวลผลเฟรมและอัปเดตสถานะ"""
+    global current_status
     
-    for font_path in thai_fonts:
-        if os.path.exists(font_path):
-            try:
-                return ImageFont.truetype(font_path, font_size)
-            except:
-                continue
-    
-    # ถ้าไม่พบฟอนต์ภาษาไทย ให้ใช้ฟอนต์เริ่มต้น
-    return ImageFont.load_default()
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    result = face_mesh.process(rgb)
 
-def draw_text(image, text, position, font_size=32, color=(0, 255, 0), use_thai=True):
-    """วาดข้อความบนภาพ"""
-    # แปลง OpenCV image เป็น PIL Image
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    pil_image = Image.fromarray(image_rgb)
-    draw = ImageDraw.Draw(pil_image)
-    
-    if use_thai:
-        # ลองใช้ฟอนต์ภาษาไทย
-        font = find_thai_font(font_size)
-        # ทดสอบว่าฟอนต์รองรับภาษาไทยหรือไม่
-        try:
-            # ทดสอบวาดตัวอักษรไทย
-            test_text = "ทดสอบ"
-            draw.text((0, 0), test_text, font=font, fill=(0, 0, 0))
-            # ถ้าสำเร็จ ใช้ภาษาไทย
-            language = 'th'
-        except:
-            # ถ้าไม่สำเร็จ ใช้ภาษาอังกฤษ
-            language = 'en'
-    else:
-        font = ImageFont.load_default()
-        language = 'en'
-    
-    # เลือกข้อความตามภาษา
-    if text in MESSAGES:
-        display_text = MESSAGES[text][language]
-    else:
-        display_text = text
-    
-    # วาดข้อความ
-    draw.text(position, display_text, font=font, fill=color)
-    
-    # แปลงกลับเป็น OpenCV format
-    image_bgr = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-    return image_bgr
+    message_key = 'no_face'
+    status_data = {
+        'message_key': message_key,
+        'message_th': MESSAGES[message_key]['th'],
+        'message_en': MESSAGES[message_key]['en'],
+        'has_face': 0,  # เปลี่ยนจาก False เป็น 0
+        'is_blinking': 0,  # เปลี่ยนจาก False เป็น 0
+        'is_smiling': 0  # เปลี่ยนจาก False เป็น 0
+    }
 
-def generate_frames():
-    cap = cv2.VideoCapture(0)
+    if result.multi_face_landmarks:
+        for landmarks in result.multi_face_landmarks:
+            landmark_list = landmarks.landmark
 
-    while True:
-        success, frame = cap.read()
-        if not success:
+            # ตรวจตา
+            left_eye_open = eye_aspect_ratio(landmark_list, LEFT_EYE)
+            right_eye_open = eye_aspect_ratio(landmark_list, RIGHT_EYE)
+
+            # ตรวจยิ้ม (ระยะปาก)
+            mouth_width = eye_aspect_ratio(landmark_list, MOUTH)
+
+            # เช็ค liveness
+            is_blinking = left_eye_open < 0.01 and right_eye_open < 0.01
+            is_smiling = mouth_width > 0.08
+
+            if is_blinking:
+                message_key = 'blinking'
+            elif is_smiling:
+                message_key = 'smiling'
+            else:
+                message_key = 'waiting'
+
+            status_data = {
+                'message_key': message_key,
+                'message_th': MESSAGES[message_key]['th'],
+                'message_en': MESSAGES[message_key]['en'],
+                'has_face': 1,  # เปลี่ยนจาก True เป็น 1
+                'is_blinking': 1 if is_blinking else 0,  # เปลี่ยนจาก boolean เป็น integer
+                'is_smiling': 1 if is_smiling else 0  # เปลี่ยนจาก boolean เป็น integer
+            }
+            
+            # วาด landmarks บนเฟรม
+            mp_drawing.draw_landmarks(frame, landmarks, mp_face_mesh.FACEMESH_TESSELATION)
             break
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        result = face_mesh.process(rgb)
+    # อัปเดตสถานะปัจจุบัน
+    current_status = status_data
+    return frame
 
-        message_key = 'no_face'
+def generate_frames():
+    """สร้างวิดีโอสตรีม"""
+    cap = cv2.VideoCapture(0)
+    
+    if not cap.isOpened():
+        print("ไม่สามารถเปิดกล้องได้")
+        return
 
-        if result.multi_face_landmarks:
-            for landmarks in result.multi_face_landmarks:
-                h, w, _ = frame.shape
-                landmark_list = landmarks.landmark
+    try:
+        while True:
+            success, frame = cap.read()
+            if not success:
+                break
 
-                # ตรวจตา
-                left_eye_open = eye_aspect_ratio(landmark_list, LEFT_EYE)
-                right_eye_open = eye_aspect_ratio(landmark_list, RIGHT_EYE)
+            # ประมวลผลเฟรมและอัปเดตสถานะ
+            frame = process_frame(frame)
 
-                # ตรวจยิ้ม (ระยะปาก)
-                mouth_width = eye_aspect_ratio(landmark_list, MOUTH)
+            # ส่งเฟรม
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            
+            # หน่วงเวลาเล็กน้อย
+            time.sleep(0.03)  # ~30 FPS
+            
+    except Exception as e:
+        print(f"เกิดข้อผิดพลาดในวิดีโอสตรีม: {e}")
+    finally:
+        cap.release()
 
-                # เช็ค liveness
-                is_blinking = left_eye_open < 0.01 and right_eye_open < 0.01
-                is_smiling = mouth_width > 0.08
-
-                if is_blinking:
-                    message_key = 'blinking'
-                elif is_smiling:
-                    message_key = 'smiling'
-                else:
-                    message_key = 'waiting'
-
-                mp_drawing.draw_landmarks(frame, landmarks, mp_face_mesh.FACEMESH_TESSELATION)
-
-        # แสดงข้อความ
-        frame = draw_text(frame, message_key, (30, 50), font_size=32, color=(0, 255, 0), use_thai=True)
-
-        _, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
+def generate_status():
+    """สร้างสถานะสตรีม"""
+    while True:
+        try:
+            # ส่งสถานะปัจจุบัน
+            yield f"data: {json.dumps(current_status)}\n\n"
+            time.sleep(0.1)  # อัปเดตทุก 100ms
+        except Exception as e:
+            print(f"เกิดข้อผิดพลาดในสถานะสตรีม: {e}")
+            break
 
 @app.route('/')
 def index():
@@ -149,6 +147,17 @@ def index():
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/status_feed')
+def status_feed():
+    return Response(generate_status(), mimetype='text/event-stream')
+
+@app.route('/test')
+def test():
+    return jsonify({'status': 'OK', 'message': 'Server is running'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    print("🚀 เริ่มต้นเซิร์ฟเวอร์...")
+    print("📱 เข้าไปที่: http://localhost:8080")
+    print("🔧 หรือ: http://127.0.0.1:8080")
+    print("⏹️  กด Ctrl+C เพื่อหยุด")
+    app.run(debug=True, host='0.0.0.0', port=8080, threaded=True)
