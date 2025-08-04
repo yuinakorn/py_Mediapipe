@@ -1,73 +1,147 @@
 # Project Structure and Documentation
 
-## โครงสร้างโปรเจคปัจจุบัน
+## โครงสร้างโปรเจคปัจจุบัน (5 สิงหาคม 2025)
 
 ```
 py_Mediapipe/
 ├── README.md              # เอกสารหลักของโปรเจค
-├── main.py                # Face Recognition ด้วย face_recognition library
-├── app.py                 # Face Detection ด้วย MediaPipe
+├── main.py                # Face Recognition (Command Line Interface)
+├── app.py                 # Web Interface (Flask + MediaPipe)
 ├── requirements.txt       # Python dependencies
 ├── .gitignore            # Git ignore rules
 ├── known_people/         # ไฟล์ภาพใบหน้าที่รู้จัก
-│   └── yui.jpg          # ภาพตัวอย่าง
-├── venv310/             # Python virtual environment (Python 3.10)
-└── docs/                # เอกสารและบันทึกการทำงาน
+│   ├── yui.jpg          # ภาพตัวอย่าง
+│   ├── john.png         # เพิ่มคนอื่นๆ ได้
+│   └── mary.jpeg        # รองรับหลายรูปแบบไฟล์
+├── templates/           # Web templates
+│   └── index.html      # Web interface template
+├── uploads/            # โฟลเดอร์สำหรับอัปโหลดไฟล์ (ถ้ามี)
+├── venv310/           # Python virtual environment (Python 3.10)
+└── docs/              # เอกสารและบันทึกการทำงาน
     ├── project_structure.md      # ไฟล์นี้
-    ├── python_path_info.md       # ข้อมูล Python paths
     ├── face_recognition_updates.md # การอัปเดต face recognition
+    ├── web_interface_guide.md    # คู่มือ Web Interface
+    ├── python_path_info.md       # ข้อมูล Python paths
     ├── gitignore_info.md         # ข้อมูล .gitignore
     └── git_setup_info.md         # การตั้งค่า Git
 ```
 
-## การย้ายไฟล์เอกสาร
+## การเปลี่ยนแปลงล่าสุด
 
-### วันที่: 4 สิงหาคม 2025
+### วันที่: 5 สิงหาคม 2025
 
-**การเปลี่ยนแปลง:**
-- สร้างโฟลเดอร์ `docs/` สำหรับเก็บเอกสาร
-- ย้ายไฟล์ .md ที่ไม่ใช่ README.md ไปยังโฟลเดอร์ `docs/`
-- `README.md` ยังคงอยู่ที่ root directory
+**การเปลี่ยนแปลงหลัก:**
+1. **เพิ่ม Web Interface** - สร้าง Flask application สำหรับ Liveness Detection
+2. **ปรับปรุง Face Recognition** - เพิ่มการแสดงร้อยละความเหมือนและรองรับหลายคน
+3. **แก้ไขปัญหา** - แก้ไขปัญหาการแสดงผลภาษาไทยและการเชื่อมต่อ
+4. **เพิ่มเอกสาร** - สร้างคู่มือ Web Interface
 
-**ไฟล์ที่ย้าย:**
-- `face_recognition_updates.md` → `docs/face_recognition_updates.md`
-- `gitignore_info.md` → `docs/gitignore_info.md`
-- `python_path_info.md` → `docs/python_path_info.md`
-- `git_setup_info.md` → `docs/git_setup_info.md`
+**ไฟล์ที่เพิ่ม:**
+- `app.py` - Flask web application
+- `templates/index.html` - Web interface template
+- `docs/web_interface_guide.md` - คู่มือ Web Interface
 
-**ไฟล์ที่ยังคงอยู่ที่ root:**
-- `README.md` - เอกสารหลักของโปรเจค
+**ไฟล์ที่อัปเดต:**
+- `main.py` - เพิ่มการแสดงร้อยละและรองรับหลายคน
+- `requirements.txt` - เพิ่ม Flask dependencies
+- `README.md` - อัปเดตให้ทันสมัย
+- `docs/face_recognition_updates.md` - อัปเดตฟีเจอร์ใหม่
 
-## วัตถุประสงค์ของโครงสร้างใหม่
+## ฟีเจอร์หลักของแต่ละไฟล์
+
+### 1. main.py (Face Recognition)
+- **เทคโนโลยี**: face_recognition library
+- **ฟีเจอร์**:
+  - โหลดรูปหลายคนจาก `known_people/`
+  - แสดงร้อยละความเหมือน (0-100%)
+  - สีกรอบตามสถานะ (เขียว/แดง)
+  - Real-time processing
+
+### 2. app.py (Web Interface)
+- **เทคโนโลยี**: Flask + MediaPipe
+- **ฟีเจอร์**:
+  - Liveness Detection (กระพริบตา/ยิ้ม)
+  - Real-time status updates
+  - Server-Sent Events
+  - CORS support
+
+### 3. templates/index.html (Web UI)
+- **เทคโนโลยี**: HTML5 + CSS3 + JavaScript
+- **ฟีเจอร์**:
+  - Responsive design
+  - Thai language support
+  - Real-time status display
+  - Modern UI/UX
+
+## Dependencies ที่ใช้
+
+### Core Dependencies
+```txt
+face-recognition==1.3.0    # Face recognition
+mediapipe==0.10.21        # Face detection & landmarks
+opencv-python==4.12.0.88  # Image processing
+dlib==20.0.0              # Face recognition dependency
+numpy==2.2.6              # Numerical computing
+```
+
+### Web Dependencies
+```txt
+Flask==3.1.1              # Web framework
+flask-cors==4.0.0         # CORS support
+pillow==11.3.0            # Image processing (PIL)
+```
+
+## การใช้งาน
+
+### Command Line Interface
+```bash
+# รัน Face Recognition
+python main.py
+```
+
+### Web Interface
+```bash
+# รัน Web Server
+python app.py
+
+# เข้าใช้งาน
+http://localhost:8080
+```
+
+## การพัฒนา
+
+### 1. การเพิ่มคนในระบบ
+1. ใส่รูปใน `known_people/`
+2. รองรับ: `.jpg`, `.png`, `.jpeg`, `.bmp`, `.tiff`
+3. ใช้ชื่อไฟล์เป็นชื่อคน
+
+### 2. การปรับแต่ง
+- **เกณฑ์ความเหมือน**: แก้ไขใน `main.py` (ค่า 0.6)
+- **เกณฑ์ Liveness**: แก้ไขใน `app.py`
+- **Port**: แก้ไขใน `app.py` (ค่า 8080)
+- **UI**: แก้ไขใน `templates/index.html`
+
+### 3. การแก้ไขปัญหา
+- **Port 5000 ถูกใช้งาน** → เปลี่ยนเป็น 8080
+- **ภาษาไทยเป็นสี่เหลี่ยม** → ใช้ Web Interface
+- **การเชื่อมต่อถูกตัด** → ตรวจสอบ CORS
+
+## วัตถุประสงค์ของโครงสร้าง
 
 ### 1. ความเป็นระเบียบ
 - แยกเอกสารออกจากไฟล์โค้ดหลัก
-- ง่ายต่อการค้นหาและจัดการเอกสาร
-- โครงสร้างโปรเจคที่ชัดเจน
+- แยก Web Interface ออกจาก Command Line
+- ง่ายต่อการค้นหาและจัดการ
 
 ### 2. การบำรุงรักษา
-- เอกสารทั้งหมดอยู่ในที่เดียว
+- เอกสารทั้งหมดอยู่ใน `docs/`
+- โค้ดแยกตามหน้าที่ชัดเจน
 - ง่ายต่อการอัปเดตและแก้ไข
-- ไม่รบกวนไฟล์โค้ดหลัก
 
 ### 3. การทำงานเป็นทีม
-- AI ตัวถัดไปจะรู้ว่าต้องเขียนไฟล์ .md ใน `docs/`
-- เอกสารมีโครงสร้างที่ชัดเจน
+- AI ตัวถัดไปจะรู้โครงสร้างที่ชัดเจน
+- เอกสารครบครันและทันสมัย
 - ง่ายต่อการติดตามการเปลี่ยนแปลง
-
-## คำสั่งที่ใช้
-
-```bash
-# สร้างโฟลเดอร์ docs
-mkdir docs
-
-# ย้ายไฟล์ .md ไปยัง docs/
-mv face_recognition_updates.md gitignore_info.md python_path_info.md git_setup_info.md docs/
-
-# ตรวจสอบโครงสร้าง
-ls -la
-ls -la docs/
-```
 
 ## สำหรับ AI ตัวถัดไป
 
@@ -84,4 +158,10 @@ ls -la docs/
 - `docs/api_documentation.md` - เอกสาร API
 
 ### การอัปเดต README.md:
-เมื่อเพิ่มไฟล์ .md ใหม่ใน docs/ ให้อัปเดต README.md เพื่อเพิ่มลิงก์ไปยังเอกสารใหม่ 
+เมื่อเพิ่มไฟล์ .md ใหม่ใน docs/ ให้อัปเดต README.md เพื่อเพิ่มลิงก์ไปยังเอกสารใหม่
+
+### หมายเหตุสำคัญ:
+- ใช้ port 8080 แทน 5000 เพื่อหลีกเลี่ยงการขัดแย้งกับ AirPlay
+- รองรับการแสดงผลภาษาไทยใน Web Interface
+- มีการจัดการข้อผิดพลาดที่ครบครัน
+- ใช้ Server-Sent Events สำหรับ real-time updates 
